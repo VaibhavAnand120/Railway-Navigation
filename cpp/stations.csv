@@ -1,0 +1,27 @@
+id,code,name,city,zone
+0,NDLS,New Delhi,Delhi,NR
+1,MMCT,Mumbai Central,Mumbai,WR
+2,MAS,Chennai Central,Chennai,SR
+3,HWH,Howrah Junction,Kolkata,ER
+4,SBC,Bangalore City,Bangalore,SWR
+5,HYB,Hyderabad Deccan,Hyderabad,SCR
+6,ADI,Ahmedabad Junction,Ahmedabad,WR
+7,PUNE,Pune Junction,Pune,CR
+8,JP,Jaipur Junction,Jaipur,NWR
+9,LKO,Lucknow,Lucknow,NR
+10,BPL,Bhopal Junction,Bhopal,WCR
+11,NGP,Nagpur Junction,Nagpur,CR
+12,PNBE,Patna Junction,Patna,ECR
+13,GHY,Guwahati,Guwahati,NFR
+14,BBS,Bhubaneswar,Bhubaneswar,ECoR
+15,AMD,Amritsar Junction,Amritsar,NR
+16,CDG,Chandigarh,Chandigarh,NR
+17,VSKP,Visakhapatnam,Visakhapatnam,ECoR
+18,VAG,Varanasi Junction,Varanasi,NR
+19,JAT,Jammu Tawi,Jammu,NR
+20,UDZ,Udaipur City,Udaipur,NWR
+21,INDB,Indore Junction,Indore,WCR
+22,CNB,Kanpur Central,Kanpur,NCR
+23,ALD,Allahabad Junction,Prayagraj,NCR
+24,JU,Jodhpur Junction,Jodhpur,NWR
+25,BSB,Banaras,Varanasi,NR

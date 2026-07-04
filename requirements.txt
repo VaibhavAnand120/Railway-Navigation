@@ -1,0 +1,6 @@
+gradio
+requests
+folium
+networkx
+pandas
+numpy

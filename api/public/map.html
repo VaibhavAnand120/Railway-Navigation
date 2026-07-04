@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>India Rail Navigation — Map</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <style>
+        :root {
+            --bg-color: #e5e7eb; /* Light grey map container background */
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --border-color: #d1d5db;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --accent: #2563eb; /* Royal Blue */
+            --green: #059669;  /* Green */
+            --red: #dc2626;    /* Red */
+            --yellow: #d97706; /* Amber */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            background-color: var(--bg-color); /* No tiles background */
+            z-index: 1;
+        }
+
+        /* Clean Classic Dashboard Panel */
+        .dashboard-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 350px;
+            max-height: calc(100vh - 40px);
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+            overflow-y: auto;
+        }
+
+        .header {
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e3a8a; /* Navy Blue */
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            background: #f3f4f6;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--green);
+        }
+
+        .info-card {
+            background: #f9fafb;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .info-value {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .path-display {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .path-station {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .path-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .path-station:not(:last-child) .path-dot::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 3px;
+            width: 2px;
+            height: 16px;
+            background-color: #bfdbfe;
+        }
+
+        /* Legend */
+        .legend {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+        }
+
+        /* Standard Map Station Markers */
+        .station-marker {
+            width: 10px;
+            height: 10px;
+            background-color: #ffffff;
+            border: 2px solid #4b5563;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+
+        .station-marker.highlighted {
+            background-color: var(--accent);
+            border-color: #ffffff;
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+        }
+
+        .station-marker.source {
+            background-color: var(--green);
+            border-color: #ffffff;
+            width: 14px;
+            height: 14px;
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.3);
+        }
+
+        .station-marker.destination {
+            background-color: var(--red);
+            border-color: #ffffff;
+            width: 14px;
+            height: 14px;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
+        }
+
+        .station-marker.nearby {
+            background-color: var(--yellow);
+            border-color: #ffffff;
+            width: 12px;
+            height: 12px;
+            box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.3);
+        }
+
+        /* Standard Popups */
+        .leaflet-popup-content-wrapper {
+            background: #ffffff !important;
+            color: #111827 !important;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .leaflet-popup-content {
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Classic Dashboard Panel -->
+    <div class="dashboard-panel">
+        <div class="header">
+            <h1>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="3" width="16" height="18" rx="2" />
+                    <rect x="7" y="7" width="10" height="5" />
+                    <path d="M7 15h10" />
+                    <path d="M7 19h10" />
+                </svg>
+                Rail Map Network
+            </h1>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                Syncing
+            </div>
+        </div>
+
+        <div id="welcome-message" class="info-card" style="text-align: center; color: var(--text-secondary); padding: 20px 10px;">
+            <p style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Waiting for search query...</p>
+            <p style="font-size: 0.75rem;">Make a route search or station lookup in the app to display here.</p>
+        </div>
+
+        <div id="route-info" style="display: none;">
+            <div class="info-card">
+                <div class="info-label">Active Route</div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <span id="route-src-badge" style="background: #ecfdf5; border: 1px solid var(--green); color: var(--green); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">NDLS</span>
+                    <span style="color: var(--text-secondary); font-size: 0.8rem;">→</span>
+                    <span id="route-dest-badge" style="background: #fef2f2; border: 1px solid var(--red); color: var(--red); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">MMCT</span>
+                </div>
+                
+                <div id="single-route-details" style="display: none;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">
+                        Stops in sequence: <span id="route-stops-count" style="color: var(--text-primary); font-weight: 600;">0 stops</span>
+                    </div>
+                    <div class="path-display" id="route-path-list">
+                        <!-- Stations populated dynamically -->
+                    </div>
+                </div>
+
+                <div id="multi-route-details" style="display: none; margin-top: 8px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                        Routes found: <span id="route-alt-count" style="color: var(--accent); font-weight: 600;">0</span>
+                    </div>
+                    <p style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px;">Alternative routes shown in different colors.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="nearby-info" style="display: none;">
+            <div class="info-card">
+                <div class="info-label">Nearby Search</div>
+                <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 6px;" id="nearby-station-name">New Delhi</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                    Stations in range: <span id="nearby-count" style="color: var(--yellow); font-weight: 600;">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--green);"></div>
+                <span>Source Station</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--red);"></div>
+                <span>Destination Station</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--accent); height: 3px;"></div>
+                <span>Primary Route Path</span>
+            </div>
+            <div class="legend-item" id="alt-legend" style="display: none;">
+                <div class="legend-color" style="background-color: #0891b2; height: 3px;"></div>
+                <span>Alternative Paths</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: var(--yellow);"></div>
+                <span>Nearby Stations</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map container -->
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        // Coordinates for the 26 Indian Rail network stations
+        const STATION_COORDS = {
+            "New Delhi": [28.6139, 77.2090],
+            "Mumbai Central": [18.9696, 72.8193],
+            "Chennai Central": [13.0827, 80.2707],
+            "Howrah Junction": [22.5837, 88.3414],
+            "Bangalore City": [12.9784, 77.5694],
+            "Hyderabad Deccan": [17.3920, 78.4727],
+            "Ahmedabad Junction": [23.0269, 72.6012],
+            "Pune Junction": [18.5289, 73.8744],
+            "Jaipur Junction": [26.9200, 75.7873],
+            "Lucknow": [26.8322, 80.9220],
+            "Bhopal Junction": [23.2750, 77.4100],
+            "Nagpur Junction": [21.1524, 79.0882],
+            "Patna Junction": [25.6026, 85.1376],
+            "Guwahati": [26.1806, 91.7495],
+            "Bhubaneswar": [20.2646, 85.8427],
+            "Amritsar Junction": [31.6340, 74.8723],
+            "Chandigarh": [30.7046, 76.7821],
+            "Visakhapatnam": [17.7275, 83.2986],
+            "Varanasi Junction": [25.3263, 82.9903],
+            "Jammu Tawi": [32.7061, 74.8797],
+            "Udaipur City": [24.5713, 73.6967],
+            "Indore Junction": [22.7179, 75.8732],
+            "Kanpur Central": [26.4542, 80.3497],
+            "Allahabad Junction": [25.4497, 81.8286],
+            "Jodhpur Junction": [26.2917, 73.0156],
+            "Banaras": [25.3124, 82.9739]
+        };
+
+        // Restrict panning and zooming bounds to India
+        const southWest = L.latLng(6, 66);
+        const northEast = L.latLng(37, 98);
+        const bounds = L.latLngBounds(southWest, northEast);
+
+        // Initialize Map (NO external tile layers will be loaded)
+        const map = L.map('map', {
+            center: [22.5, 78.5],
+            zoom: 5,
+            minZoom: 4,
+            maxZoom: 7,
+            maxBounds: bounds,
+            maxBoundsViscosity: 1.0,
+            zoomControl: false
+        });
+
+        // Add Zoom Control at bottom right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        let stationsData = [];
+        let stationMarkers = {};
+        let activeRouteLayers = [];
+        
+        let lastStateJson = "";
+
+        // Fetch stations & GeoJSON outline, render outline map of India
+        async function loadNetwork() {
+            try {
+                // Load India Outline GeoJSON locally
+                const geoJsonRes = await fetch('/static/india.geojson');
+                const geoJsonData = await geoJsonRes.json();
+                L.geoJSON(geoJsonData, {
+                    style: {
+                        color: '#9ca3af',      // Medium grey state border lines
+                        weight: 1.0,           // Thinner lines for clean state outlines
+                        fillColor: '#ffffff',  // Pure white land background
+                        fillOpacity: 1
+                    },
+                    interactive: false
+                }).addTo(map);
+
+                // Get all stations from Express API
+                const stationsRes = await fetch('/static/api/search/stations');
+                const stationsObj = await stationsRes.json();
+                stationsData = stationsObj.stations || [];
+
+                // Render stations on map
+                stationsData.forEach(st => {
+                    const coords = STATION_COORDS[st.name];
+                    if (!coords) return;
+
+                    const stationIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div class="station-marker" id="marker-${st.id}"></div>`,
+                        iconSize: [12, 12],
+                        iconAnchor: [6, 6]
+                    });
+
+                    const marker = L.marker(coords, { icon: stationIcon })
+                        .bindPopup(`<strong>${st.name} (${st.code})</strong><br>Zone: ${st.zone}<br>City: ${st.city}`)
+                        .addTo(map);
+
+                    stationMarkers[st.name] = {
+                        marker: marker,
+                        data: st
+                    };
+                });
+
+                // NO background track grid rendered by default (only edges on demand)
+
+            } catch (err) {
+                console.error("Failed to load map base layer:", err);
+            }
+        }
+
+        // Fetch updates from /api/map-state
+        async function pollState() {
+            try {
+                const res = await fetch('/static/api/map-state');
+                const state = await res.json();
+                
+                const stateStr = JSON.stringify(state);
+                if (stateStr === lastStateJson) return; // No updates
+                lastStateJson = stateStr;
+
+                updateMapState(state);
+            } catch (err) {
+                console.error("Polling error:", err);
+            }
+        }
+
+        // Apply highlights, paths, nearby stations to map
+        function updateMapState(state) {
+            // 1. Clear previous dynamic route layers
+            activeRouteLayers.forEach(layer => map.removeLayer(layer));
+            activeRouteLayers = [];
+
+            // Reset all markers to normal class
+            stationsData.forEach(st => {
+                const element = document.querySelector(`#marker-${st.id}`);
+                if (element) {
+                    element.className = "station-marker";
+                }
+            });
+
+            const welcomeEl = document.getElementById('welcome-message');
+            const routeInfoEl = document.getElementById('route-info');
+            const nearbyInfoEl = document.getElementById('nearby-info');
+            const altLegendEl = document.getElementById('alt-legend');
+
+            // Reset Sidebar Info
+            welcomeEl.style.display = 'block';
+            routeInfoEl.style.display = 'none';
+            nearbyInfoEl.style.display = 'none';
+            altLegendEl.style.display = 'none';
+
+            let fitBoundsCoords = [];
+
+            // Check what needs displaying
+            const hasPath = state.path && state.path.length > 0;
+            const hasPaths = state.paths && state.paths.length > 0;
+            const hasNearby = state.nearby && state.nearby.length > 0;
+            const hasHighlights = state.highlighted && state.highlighted.length > 0;
+
+            if (hasPath || hasPaths || hasNearby || hasHighlights) {
+                welcomeEl.style.display = 'none';
+            }
+
+            // 2. Draw Paths (Draw edges whenever requested)
+            if (hasPath) {
+                routeInfoEl.style.display = 'block';
+                document.getElementById('single-route-details').style.display = 'block';
+                document.getElementById('multi-route-details').style.display = 'none';
+
+                const src = state.path[0];
+                const dest = state.path[state.path.length - 1];
+
+                document.getElementById('route-src-badge').textContent = stationMarkers[src]?.data.code || src;
+                document.getElementById('route-dest-badge').textContent = stationMarkers[dest]?.data.code || dest;
+                document.getElementById('route-stops-count').textContent = `${state.path.length - 2} stops`;
+
+                // Populate path list in sidebar
+                const listEl = document.getElementById('route-path-list');
+                listEl.innerHTML = "";
+                state.path.forEach(stName => {
+                    const st = stationMarkers[stName]?.data;
+                    if (st) {
+                        const row = document.createElement('div');
+                        row.className = "path-station";
+                        row.innerHTML = `<span class="path-dot"></span><span>${stName} (${st.code})</span>`;
+                        listEl.appendChild(row);
+                    }
+                });
+
+                // Draw solid polyline for the requested path
+                const coords = state.path.map(name => STATION_COORDS[name]).filter(c => c !== undefined);
+                fitBoundsCoords.push(...coords);
+
+                const coreLine = L.polyline(coords, {
+                    color: 'var(--accent)',
+                    weight: 3.5,
+                    opacity: 0.9,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    interactive: false
+                }).addTo(map);
+                activeRouteLayers.push(coreLine);
+
+                // Mark stations along the path as highlighted
+                state.path.forEach(name => {
+                    const id = stationMarkers[name]?.data.id;
+                    const el = document.getElementById(`marker-${id}`);
+                    if (el) el.className = "station-marker highlighted";
+                });
+            } 
+            else if (hasPaths) {
+                // Alternative Routes Case
+                routeInfoEl.style.display = 'block';
+                document.getElementById('single-route-details').style.display = 'none';
+                document.getElementById('multi-route-details').style.display = 'block';
+                altLegendEl.style.display = 'flex';
+
+                if (state.highlighted && state.highlighted.length >= 2) {
+                    const src = state.highlighted[0];
+                    const dest = state.highlighted[1];
+                    document.getElementById('route-src-badge').textContent = stationMarkers[src]?.data.code || src;
+                    document.getElementById('route-dest-badge').textContent = stationMarkers[dest]?.data.code || dest;
+                }
+                document.getElementById('route-alt-count').textContent = state.paths.length;
+
+                const altColors = ['#2563eb', '#0891b2', '#db2777', '#0d9488', '#7c3aed'];
+
+                state.paths.forEach((p, idx) => {
+                    const coords = p.map(name => STATION_COORDS[name]).filter(c => c !== undefined);
+                    fitBoundsCoords.push(...coords);
+
+                    const color = altColors[idx % altColors.length];
+
+                    const core = L.polyline(coords, {
+                        color: color,
+                        opacity: 0.9,
+                        weight: 3.5,
+                        dashArray: idx > 0 ? '5, 5' : undefined,
+                    }).addTo(map);
+                    activeRouteLayers.push(core);
+
+                    // Mark intermediate stations
+                    p.forEach(name => {
+                        const id = stationMarkers[name]?.data.id;
+                        const el = document.getElementById(`marker-${id}`);
+                        if (el && el.className === "station-marker") {
+                            el.className = "station-marker highlighted";
+                        }
+                    });
+                });
+            }
+
+            // 3. Highlight Nearby Stations
+            if (hasNearby) {
+                nearbyInfoEl.style.display = 'block';
+                const centerStation = state.highlighted && state.highlighted[0] ? state.highlighted[0] : "";
+                document.getElementById('nearby-station-name').textContent = centerStation;
+                document.getElementById('nearby-count').textContent = state.nearby.length;
+
+                const centerCoords = STATION_COORDS[centerStation];
+                if (centerCoords) fitBoundsCoords.push(centerCoords);
+
+                state.nearby.forEach(name => {
+                    const coords = STATION_COORDS[name];
+                    if (coords) fitBoundsCoords.push(coords);
+
+                    const id = stationMarkers[name]?.data.id;
+                    const el = document.getElementById(`marker-${id}`);
+                    if (el) el.className = "station-marker nearby";
+                });
+            }
+
+            // 4. Mark Source and Destination distinctly (takes priority over path/nearby classes)
+            if (state.highlighted && state.highlighted.length > 0) {
+                state.highlighted.forEach((name, idx) => {
+                    const coords = STATION_COORDS[name];
+                    if (coords) fitBoundsCoords.push(coords);
+
+                    const id = stationMarkers[name]?.data.id;
+                    const el = document.getElementById(`marker-${id}`);
+                    if (el) {
+                        if (idx === 0) {
+                            el.className = "station-marker source";
+                        } else if (idx === 1) {
+                            el.className = "station-marker destination";
+                        } else {
+                            el.className = "station-marker highlighted";
+                        }
+                    }
+                });
+            }
+
+            // 5. Fit map bounds to show everything nicely
+            if (fitBoundsCoords.length > 0) {
+                const bounds = L.latLngBounds(fitBoundsCoords);
+                map.fitBounds(bounds, {
+                    padding: [40, 40],
+                    maxZoom: 7,
+                    animate: true,
+                    duration: 1.0
+                });
+            } else {
+                map.setView([22.5, 78.5], 5, { animate: true });
+            }
+        }
+
+        // Start initialization
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadNetwork();
+            // Start polling every 1 second
+            setInterval(pollState, 1000);
+            pollState();
+        });
+    </script>
+</body>
+</html>
