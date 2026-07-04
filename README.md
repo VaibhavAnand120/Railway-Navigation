@@ -1,4 +1,4 @@
-# 🚂 India Rail Navigation System
+# India Rail Navigation System
 
 [![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Live%20Demo-blue)](https://huggingface.co/spaces/VaibhavAnand120/india-rail-navigaiton)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
